@@ -1,0 +1,2 @@
+# assignment
+small coding assingment. 
