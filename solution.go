@@ -4,6 +4,10 @@ import (
 	"fmt"
 )
 
+type Interval struct {
+	start, end int
+}
+
 func main() {
 	var start1, end1 int
 	var start2, end2 int
@@ -36,7 +40,7 @@ func main() {
 		return
 	}
 
-	fmt.Printf(" Interval I's input: [%d, %d), Interval I prime's input: [%d, %d), Circle C's Fixed Points: %d",
+	fmt.Printf(" Interval I's input: [%d, %d), Interval I prime's input: [%d, %d), Circle C's Fixed Points: %d \n",
 		i.start, i.end, iPrime.start, iPrime.end, fixedPoint)
 
 	if !inCircleC(i, iPrime, fixedPoint) {
