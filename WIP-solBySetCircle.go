@@ -145,7 +145,7 @@ func mergeIntervals(intervals [][2]float64) [][2]float64 {
 	return merged
 }
 
-func main() {
+func run() {
 	center := [2]float64{0, 0}
 	radius := 5.0
 	numFixedPoints := 12
