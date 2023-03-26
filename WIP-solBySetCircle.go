@@ -17,32 +17,6 @@ func NewCircle(center [2]float64, radius float64, FixedPoints int) *Circle {
 	return &circle
 }
 
-func (c *Circle) fgetInterval(startIndex, endIndex int) [][2]float64 {
-	numPoints := len(c.FixedPoints)
-	point1 := c.FixedPoints[startIndex%numPoints]
-	point2 := c.FixedPoints[endIndex%numPoints]
-	dx, dy := point2[0]-point1[0], point2[1]-point1[1]
-	theta1 := math.Atan2(dy, dx)
-	if startIndex == numPoints-1 && endIndex == 0 {
-
-		theta2 := math.Pi*2 + theta1
-		return [][2]float64{{theta1, theta2}} // in radians
-	} else {
-		theta2 := math.Atan2(-dy, -dx)
-		start := theta1 // in radians
-		end := theta2   // in radians
-		if math.Abs(end-start-math.Pi*2) < 1e-9 {
-			return [][2]float64{{0, math.Pi * 2}} // entire circle
-		} else if math.Abs(end-start) < 1e-9 {
-			return [][2]float64{} // empty interval
-		} else if start <= end {
-			return [][2]float64{{start, end}}
-		} else {
-			return [][2]float64{{start, math.Pi * 2}, {0, end}} // half-open interval
-		}
-	}
-}
-
 func (c *Circle) getInterval(startIndex, endIndex int) [][2]float64 {
 	numPoints := len(c.FixedPoints)
 	point1 := c.FixedPoints[startIndex%numPoints]
@@ -73,6 +47,7 @@ func (c *Circle) getInterval(startIndex, endIndex int) [][2]float64 {
 		theta2 := math.Atan2(-dy, -dx)
 		start := theta1 // in radians
 		end := theta2   // in radians
+		//
 		if math.Abs(end-start-math.Pi*2) < 1e-9 {
 			return [][2]float64{{0, math.Pi * 2}} // entire circle
 		} else if math.Abs(end-start) < 1e-9 {
