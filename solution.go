@@ -48,8 +48,10 @@ func main() {
 	}
 
 	var unionRes Interval
-	if areIntervalsEqual(i, iPrime) {
-		fmt.Printf("Union is [%d, %d)", i.start, i.end)
+	equal, res := areIntervalsEqual(i, iPrime)
+	if equal {
+		fmt.Printf("Union is [%d, %d)", res.start, res.end)
+		return
 	}
 	if isUnionSameCircleC(i, iPrime, fixedPoints) {
 		fmt.Printf("Union is [%d, %d)", i.start, i.end)
@@ -108,15 +110,18 @@ func inCircleC(intervalI, intervalIPrime Interval, fixedPoint int) bool {
 	return true
 }
 
-func areIntervalsEqual(intervalI, intervalIPrime Interval) bool {
-	if intervalI.start == intervalIPrime.start && intervalI.end == intervalIPrime.end ||
-		intervalI.start == intervalIPrime.end && intervalI.end == intervalIPrime.start {
+func areIntervalsEqual(intervalI, intervalIPrime Interval) (bool, Interval) {
+	if intervalI.start == intervalIPrime.start && intervalI.end == intervalIPrime.end {
 		fmt.Println("Interval I & Interval I prime is Equal")
-		return true
+		return true, intervalI
 	}
-	return false
+
+	return false, Interval{
+		-1, -1,
+	}
 }
 
+// TODO: need to add match point case.
 func isUnionSameCircleC(intervalI, intervalIPrime, fixedPoints Interval) bool {
 
 	if isGoAroundCircle(intervalI, fixedPoints) && !isGoAroundCircle(intervalIPrime, fixedPoints) {
@@ -155,6 +160,11 @@ func isUnionSameCircleC(intervalI, intervalIPrime, fixedPoints Interval) bool {
 			intervalIPrime.end > intervalIPrime.start &&
 			fixedPoints.end > intervalIPrime.end
 		if IStartOverlapped || iPrimeStartOverlapped {
+			fmt.Println("Intervals are same as Circle C")
+			return true
+		}
+
+		if intervalI.end == intervalIPrime.start && intervalI.start == intervalIPrime.end {
 			fmt.Println("Intervals are same as Circle C")
 			return true
 		}
