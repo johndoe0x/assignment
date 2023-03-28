@@ -238,14 +238,21 @@ func hasPointMatchedUnion(intervalI, intervalIPrime Interval) (bool, Interval) {
 }
 
 func checkInclusion(interval1, interval2 Interval) bool {
+	var incldStart, incldEnd bool
 	for i := interval1.start + 1; i < interval1.end; i++ {
-		incldStart := i == interval2.start
-		incldEnd := i == interval2.end
-		if incldStart && incldEnd {
-			return true
+		incldStart = i == interval2.start
+		if incldStart {
+			break
 		}
 	}
-	return false
+	for i := interval1.start + 1; i < interval1.end; i++ {
+		incldEnd = i == interval2.end
+		if incldEnd {
+			break
+		}
+	}
+
+	return incldEnd && incldStart
 }
 
 func isIntervalIncluded(intervalI, intervalIPrime, fixedPoint Interval) (bool, Interval) {
