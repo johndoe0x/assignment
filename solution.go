@@ -50,7 +50,7 @@ func main() {
 	var unionRes Interval
 	equal, res := isSame(i, iPrime)
 	if equal {
-		fmt.Printf("Union is [%d, %d)", res.start, res.end)
+		fmt.Printf("both interval is same. Union is [%d, %d)", res.start, res.end)
 		return
 	}
 	if isUnionSameCircleC(i, iPrime, fixedPoints) {
@@ -60,7 +60,7 @@ func main() {
 
 	matched, unionRes := hasPointMatchedUnion(i, iPrime)
 	if matched {
-		fmt.Printf("Union is [%d, %d)", unionRes.start, unionRes.end)
+		fmt.Printf("Intervals met a point, Union is [%d, %d)", unionRes.start, unionRes.end)
 		return
 	}
 
@@ -257,8 +257,7 @@ func checkInclusion(interval1, interval2 Interval) bool {
 
 func isIntervalIncluded(intervalI, intervalIPrime, fixedPoint Interval) (bool, Interval) {
 	matched, _ := isApointMatched(intervalI, intervalIPrime)
-	checkPointMatchedUnion, v := hasPointMatchedUnion(intervalI, intervalIPrime)
-	if !matched && !checkPointMatchedUnion {
+	if !matched {
 
 		if !intervalI.isGoAround && !intervalIPrime.isGoAround {
 			if checkInclusion(intervalI, intervalIPrime) {
@@ -301,24 +300,85 @@ func isIntervalIncluded(intervalI, intervalIPrime, fixedPoint Interval) (bool, I
 		}
 	} else {
 		fmt.Println("Error Point matched exists.")
-		return false, v
+		return false, intervalIPrime
 	}
 	return false, Interval{start: -1, end: -1}
 }
+
+func checkOverlapped(interval Interval, target int) bool {
+	var incldStart bool
+	for i := interval.start + 1; i < interval.end; i++ {
+		incldStart = i == target
+		if incldStart {
+			break
+		}
+	}
+
+	return incldStart
+}
 func isOverlapped(intervalI, intervalIPrime, fixedPoint Interval) (bool, Interval) {
 	if !intervalI.isGoAround && !intervalIPrime.isGoAround {
-		if intervalI.end > intervalIPrime.start && intervalI.end < intervalIPrime.end {
-			return true, Interval{start: intervalI.start, end: intervalIPrime.end, isGoAround: false}
+		if MinOf(intervalI.start, intervalIPrime.start) == intervalI.start &&
+			MaxOf(intervalI.end, intervalIPrime.end) == intervalIPrime.end {
+			if intervalI.end > intervalIPrime.start && intervalI.end < intervalIPrime.end {
+				return true, Interval{start: intervalI.start, end: intervalIPrime.end, isGoAround: false}
+			}
+		}
+
+		if MinOf(intervalI.start, intervalIPrime.start) == intervalI.start &&
+			MaxOf(intervalI.end, intervalIPrime.end) == intervalI.end {
+			if intervalIPrime.end > intervalI.start && intervalIPrime.end < intervalI.end {
+				return true, Interval{start: intervalIPrime.start, end: intervalI.end, isGoAround: false}
+			}
 		}
 
 	} else if intervalI.isGoAround && !intervalIPrime.isGoAround {
-		// overlapped in start
+		// overlapped in Interval i 's start
+		// Interval prime's start has not to include/ overlapped with Interval i's end.
+		if intervalI.start < intervalIPrime.end && intervalI.end != intervalIPrime.start && intervalIPrime.start > intervalI.end {
+			overlappedRes := checkOverlapped(intervalI, intervalIPrime.end) && !checkOverlapped(intervalI, intervalIPrime.start)
+			return overlappedRes,
+				Interval{
+					intervalIPrime.start,
+					intervalI.end,
+					true,
+				}
+		}
 
-		// overlapped in end
+		// overlapped in Interval i 's end
+		// Interval prime's end has not to include/ overlapped with Interval i's start.
+		if intervalIPrime.start < intervalI.end && intervalI.start != intervalIPrime.end && intervalI.start > intervalIPrime.end {
+			overlappedRes := !checkOverlapped(intervalI, intervalIPrime.end) && checkOverlapped(intervalI, intervalIPrime.start)
+			return overlappedRes,
+				Interval{
+					intervalI.start,
+					intervalIPrime.end,
+					true,
+				}
+		}
+
 	} else if !intervalI.isGoAround && intervalIPrime.isGoAround {
 		// overlapped in start
+		if intervalI.end > intervalIPrime.start && intervalI.start != intervalIPrime.end && intervalIPrime.end < intervalI.start {
+			overlappedRes := checkOverlapped(intervalIPrime, intervalI.end) && !checkOverlapped(intervalIPrime, intervalI.start)
+			return overlappedRes,
+				Interval{
+					intervalI.start,
+					intervalIPrime.end,
+					true,
+				}
+		}
 
 		// overlapped in end
+		if intervalI.start < intervalIPrime.end && intervalI.end != intervalIPrime.start && intervalIPrime.start > intervalI.start {
+			overlappedRes := !checkOverlapped(intervalIPrime, intervalI.end) && checkOverlapped(intervalIPrime, intervalI.start)
+			return overlappedRes,
+				Interval{
+					intervalIPrime.start,
+					intervalI.end,
+					true,
+				}
+		}
 	}
 	return false, Interval{start: -1, end: -1}
 }
