@@ -6,6 +6,7 @@ import (
 
 type Interval struct {
 	start, end int
+	isGoAround bool
 }
 
 func main() {
@@ -18,13 +19,15 @@ func main() {
 	fixedPoints := Interval{
 		fixedPoint - fixedPoint,
 		fixedPoint - 1,
+		true,
 	}
 
 	fmt.Print("Enter Interval I's start1, end1: ")
 	fmt.Scan(&start1, &end1)
 	i := Interval{
-		start1,
-		end1,
+		start1 % fixedPoint,
+		end1 % fixedPoint,
+		start1-end1 > 0,
 	}
 	if isPointEqual(i) {
 		return
@@ -32,8 +35,9 @@ func main() {
 	fmt.Print("Enter Interval I prims's start2, end2: ")
 	fmt.Scan(&start2, &end2)
 	iPrime := Interval{
-		start2,
-		end2,
+		start2 % fixedPoint,
+		end2 % fixedPoint,
+		start2-end2 > 0,
 	}
 
 	if isPointEqual(iPrime) {
@@ -43,30 +47,26 @@ func main() {
 	fmt.Printf(" Interval I's input: [%d, %d), Interval I prime's input: [%d, %d), Circle C's Fixed Points: %d \n",
 		i.start, i.end, iPrime.start, iPrime.end, fixedPoint)
 
-	if !inCircleC(i, iPrime, fixedPoint) {
-		return
-	}
-
 	var unionRes Interval
-	equal, res := areIntervalsEqual(i, iPrime)
+	equal, res := isSame(i, iPrime)
 	if equal {
 		fmt.Printf("Union is [%d, %d)", res.start, res.end)
 		return
 	}
 	if isUnionSameCircleC(i, iPrime, fixedPoints) {
-		fmt.Printf("Union is [%d, %d)", i.start, i.end)
+		fmt.Printf("Union is same as circle [%d, %d)", fixedPoints.start, fixedPoints.end)
+		return
+	}
+
+	matched, unionRes := hasPointMatchedUnion(i, iPrime)
+	if matched {
+		fmt.Printf("Union is [%d, %d)", unionRes.start, unionRes.end)
 		return
 	}
 
 	include, unionRes := isIntervalIncluded(i, iPrime, fixedPoints)
 	if include {
-		fmt.Printf("Union is [%d, %d)", unionRes.start, unionRes.end)
-		return
-	}
-
-	matched, unionRes := isPointMatched(i, iPrime, fixedPoints)
-	if matched {
-		fmt.Printf("Union is [%d, %d)", unionRes.start, unionRes.end)
+		fmt.Printf("intervals are includes . Union is [%d, %d)", unionRes.start, unionRes.end)
 		return
 	}
 
@@ -99,312 +99,219 @@ func isPointEqual(interval Interval) bool {
 	return false
 }
 
-func inCircleC(intervalI, intervalIPrime Interval, fixedPoint int) bool {
+func isSame(interval1, interval2 Interval) (bool, Interval) {
+	if interval1 == interval2 {
+		fmt.Println("Both interval is same")
+		return true, interval1
+	}
+	return false, interval1
+}
 
-	allPoints := gatheringIntervals(intervalI, intervalIPrime)
-	fixedStart, fixedEnd := 0, fixedPoint-1
-	for _, p := range allPoints {
-		if p < fixedStart || p > fixedEnd {
-			fmt.Println("One of the interval points is not on the Circle C.")
-			return false
+func isApointMatched(interval1, interval2 Interval) (bool, int) {
+	arr := make([]int, 2)
+	arr[0] = interval2.start
+	arr[1] = interval2.end
+	for _, v := range arr {
+		if v == interval1.start || v == interval1.end {
+			fmt.Println("point is matched")
+			return true, v
 		}
 	}
-	return true
+	return false, -1
 }
 
-func areIntervalsEqual(intervalI, intervalIPrime Interval) (bool, Interval) {
-	if intervalI.start == intervalIPrime.start && intervalI.end == intervalIPrime.end {
-		fmt.Println("Interval I & Interval I prime is Equal")
-		return true, intervalI
-	}
-
-	return false, Interval{
-		-1, -1,
-	}
-}
-
-// TODO: need to add match point case.
 func isUnionSameCircleC(intervalI, intervalIPrime, fixedPoints Interval) bool {
-
-	if isGoAroundCircle(intervalI, fixedPoints) && !isGoAroundCircle(intervalIPrime, fixedPoints) {
-		IStartOverlapped := intervalI.start < intervalIPrime.end
-		IEndOverlapped := intervalI.end > intervalIPrime.start
-		overlapCheck := IStartOverlapped && IEndOverlapped
-		if overlapCheck {
+	matched, _ := isApointMatched(intervalI, intervalIPrime)
+	if matched {
+		if intervalI.start == intervalIPrime.end && intervalI.end == intervalIPrime.start {
 			return true
 		}
-		if intervalI.end == intervalIPrime.start && intervalI.start == intervalIPrime.end {
-			return true
+		if intervalI.end == intervalIPrime.start && !intervalI.isGoAround && intervalIPrime.isGoAround {
+			return intervalI.start < intervalIPrime.end && intervalI.end > intervalIPrime.end
+
 		}
 
+		if intervalI.start == intervalIPrime.end && intervalI.isGoAround && !intervalIPrime.isGoAround {
+			return intervalI.end < intervalIPrime.start && intervalI.end < intervalIPrime.end
+		}
+	} else {
+
+		if intervalI.isGoAround && !intervalIPrime.isGoAround {
+			//in this  case intervalI  has to set inside of intervalPrime.
+			if intervalI.start > intervalIPrime.start && intervalI.end > intervalIPrime.start &&
+				//check less than biggest fixed point
+				intervalI.start < fixedPoints.end && intervalI.end < fixedPoints.end {
+				return true
+			} else if intervalIPrime.start < intervalI.end && intervalIPrime.end < intervalI.end &&
+				//check bigger than biggest fixed point
+				intervalIPrime.start > fixedPoints.start && intervalIPrime.end > fixedPoints.start {
+				return true
+			}
+		} else if !intervalI.isGoAround && intervalIPrime.isGoAround {
+			//in this  case intervalPrime has to set inside of intervalI.
+			if intervalIPrime.start > intervalI.start && intervalIPrime.end > intervalI.start &&
+				//check less than the biggest fixed point
+				intervalIPrime.start < fixedPoints.end && intervalIPrime.end < fixedPoints.end {
+				return true
+			} else if intervalIPrime.start < intervalI.end && intervalIPrime.end < intervalI.end &&
+				//check bigger than biggest fixed point
+				intervalIPrime.start > fixedPoints.start && intervalIPrime.end > fixedPoints.start {
+				return true
+			}
+		} else if intervalI.isGoAround && intervalIPrime.isGoAround {
+			whoIsBigger := intervalI.start-intervalI.end > intervalIPrime.start-intervalI.end
+			// here is the two case, one is one interval is go around circle but less than the biggest fixed point && bigger than another interval's start
+			// here is the two case, one is one interval is go around circle but bigger than the smallest fixed point && smaller tha anotjer interval's end
+
+			// if true interval prime has less radian than interval prime
+			if whoIsBigger {
+				return intervalI.start < intervalIPrime.start && intervalI.end > intervalIPrime.end
+				// if false  interval i has less radian than interval i
+			} else {
+				return intervalIPrime.start < intervalI.start && intervalI.end < intervalIPrime.end
+			}
+
+		}
 	}
-	if !isGoAroundCircle(intervalI, fixedPoints) && isGoAroundCircle(intervalIPrime, fixedPoints) {
-		iPrimeStartOverlapped := intervalIPrime.start < intervalI.end
-		iPrimeEndOverlapped := intervalIPrime.end > intervalI.start
-		overlapCheck := iPrimeStartOverlapped && iPrimeEndOverlapped
-		if overlapCheck {
-			return true
-		}
-		if intervalI.end == intervalIPrime.start && intervalI.start == intervalIPrime.end {
-			return true
+	return false
+}
+func MinOf(vars ...int) int {
+	min := vars[0]
+
+	for _, i := range vars {
+		if min > i {
+			min = i
 		}
 	}
 
-	// This  isGoAroundCircle condition is wrong.
-	if !isGoAroundCircle(intervalI, fixedPoints) && !isGoAroundCircle(intervalIPrime, fixedPoints) {
-		IStartOverlapped := intervalI.start > intervalIPrime.start && intervalI.end > intervalIPrime.start &&
-			intervalI.end > intervalI.start &&
-			fixedPoints.end > intervalI.end
-		iPrimeStartOverlapped := intervalIPrime.start > intervalI.start && intervalIPrime.end > intervalI.start &&
-			intervalIPrime.end > intervalIPrime.start &&
-			fixedPoints.end > intervalIPrime.end
-		if IStartOverlapped || iPrimeStartOverlapped {
-			return true
-		}
+	return min
+}
 
-		if intervalI.end == intervalIPrime.start && intervalI.start == intervalIPrime.end {
-			return true
+func MaxOf(vars ...int) int {
+	max := vars[0]
+
+	for _, i := range vars {
+		if max < i {
+			max = i
 		}
 	}
 
+	return max
+}
+
+func hasPointMatchedUnion(intervalI, intervalIPrime Interval) (bool, Interval) {
+	matched, v := isApointMatched(intervalI, intervalIPrime)
+	if matched {
+
+		if v == intervalI.start && v == intervalIPrime.start {
+			if intervalI.end > intervalIPrime.end {
+				return true, intervalI
+			} else {
+				return true, intervalIPrime
+			}
+
+		} else if v == intervalI.end && v == intervalIPrime.end {
+			if intervalI.start > intervalIPrime.end {
+				return true, intervalIPrime
+			} else {
+				return true, intervalI
+			}
+		} else if v == intervalI.end && v == intervalIPrime.start || v == intervalI.start && v == intervalIPrime.end {
+			if !intervalI.isGoAround && !intervalIPrime.isGoAround {
+
+				return true, Interval{
+					MinOf(intervalIPrime.end, intervalI.start),
+					MaxOf(intervalIPrime.end, intervalI.start),
+					false,
+				}
+			} else {
+				return true, Interval{
+					MaxOf(intervalIPrime.end, intervalI.start),
+					MinOf(intervalIPrime.end, intervalI.start),
+					true,
+				}
+			}
+		}
+	}
+
+	return false, Interval{start: -1, end: -1}
+}
+
+func checkInclusion(interval1, interval2 Interval) bool {
+	for i := interval1.start + 1; i < interval1.end; i++ {
+		incldStart := i == interval2.start
+		incldEnd := i == interval2.end
+		if incldStart && incldEnd {
+			return true
+		}
+	}
 	return false
 }
 
-func isGoAroundCircle(i, fixedPoint Interval) bool {
-	return i.end < i.start && i.end >= fixedPoint.start && i.start <= fixedPoint.end
-}
-
-func isPointMatched(intervalI, intervalIPrime, fixedPoint Interval) (bool, Interval) {
-
-	var intervalRes Interval
-	intervalIEndMatched := intervalI.end == intervalIPrime.start
-	intervalIPrimeEndMatched := intervalIPrime.end == intervalI.start
-
-	if intervalIEndMatched {
-		if !isGoAroundCircle(intervalI, fixedPoint) && !isGoAroundCircle(intervalIPrime, fixedPoint) {
-			if intervalI.start < intervalIPrime.end {
-				intervalRes.start = intervalI.start
-				intervalRes.end = intervalIPrime.end
-				return true, intervalRes
-			}
-		}
-		if isGoAroundCircle(intervalI, fixedPoint) && !isGoAroundCircle(intervalIPrime, fixedPoint) {
-			if intervalIPrime.start < intervalIPrime.end {
-				intervalRes.start = intervalI.start
-				intervalRes.end = intervalIPrime.end
-				return true, intervalRes
-			}
-		}
-
-		if !isGoAroundCircle(intervalI, fixedPoint) && isGoAroundCircle(intervalIPrime, fixedPoint) {
-			if intervalI.start < intervalI.end {
-				intervalRes.start = intervalI.start
-				intervalRes.end = intervalIPrime.end
-				return true, intervalRes
-			}
-		}
-
-	}
-	if intervalIPrimeEndMatched {
-		if !isGoAroundCircle(intervalI, fixedPoint) && !isGoAroundCircle(intervalIPrime, fixedPoint) {
-			if intervalIPrime.start < intervalI.end {
-				intervalRes.start = intervalIPrime.start
-				intervalRes.end = intervalI.end
-				return true, intervalRes
-			}
-
-		}
-		if isGoAroundCircle(intervalI, fixedPoint) && !isGoAroundCircle(intervalIPrime, fixedPoint) {
-			if intervalIPrime.start < intervalIPrime.end {
-				intervalRes.start = intervalIPrime.start
-				intervalRes.end = intervalI.end
-				return true, intervalRes
-			}
-		}
-
-		if !isGoAroundCircle(intervalI, fixedPoint) && isGoAroundCircle(intervalIPrime, fixedPoint) {
-			if intervalI.start < intervalI.end {
-				intervalRes.start = intervalIPrime.start
-				intervalRes.end = intervalI.end
-				return true, intervalRes
-			}
-		}
-	}
-
-	return false, Interval{start: -1, end: -1}
-}
-
 func isIntervalIncluded(intervalI, intervalIPrime, fixedPoint Interval) (bool, Interval) {
-	// Not go around circle.
-	startRangeEqual := intervalI.start == intervalIPrime.start
-	endRangeEqual := intervalI.end == intervalIPrime.end
-	if !isGoAroundCircle(intervalI, fixedPoint) && !isGoAroundCircle(intervalIPrime, fixedPoint) {
-		// if res is interval I
-		iStartRange := intervalI.start < intervalIPrime.start && intervalI.start < intervalIPrime.end
-		iEndRange := intervalI.end > intervalIPrime.start && intervalI.end > intervalIPrime.end
-		if iStartRange && iEndRange && !startRangeEqual && !endRangeEqual {
-			return true, intervalI
-		}
-		// Include and Start point is equal
-		if iEndRange && startRangeEqual && intervalI.start < intervalIPrime.end && !endRangeEqual {
-			return true, intervalI
-		}
-		// Include and end point is equal
-		if iStartRange && endRangeEqual && intervalI.start < intervalIPrime.start && !startRangeEqual {
-			return true, intervalI
-		}
-		// if res is interval I Prime
-		iPrimeStartRange := intervalIPrime.start < intervalI.start && intervalIPrime.start < intervalI.end
-		iPrimeEndRange := intervalIPrime.end > intervalI.start && intervalIPrime.end > intervalI.end
-		if iPrimeStartRange && iPrimeEndRange && !startRangeEqual && !endRangeEqual {
-			return true, intervalIPrime
-		}
-		// Include and Start point is equal
-		if iPrimeEndRange && startRangeEqual && intervalIPrime.start < intervalI.end && !endRangeEqual {
-			return true, intervalIPrime
-		}
-		// Include and end point is equal
-		if iPrimeStartRange && endRangeEqual && intervalIPrime.start < intervalI.start && !startRangeEqual {
-			return true, intervalIPrime
-		}
-	} else if isGoAroundCircle(intervalI, fixedPoint) && isGoAroundCircle(intervalIPrime, fixedPoint) {
-		iStartRange := intervalI.start < intervalIPrime.start && intervalI.start > intervalIPrime.end
-		iEndRange := intervalI.end < intervalIPrime.start && intervalI.end > intervalIPrime.end
-		// if res is interval I
-		if iStartRange && iEndRange && !startRangeEqual && !endRangeEqual {
-			return true, intervalI
-		}
-		// Include and Start point is equal
-		if iEndRange && startRangeEqual && intervalI.end > intervalIPrime.end && !endRangeEqual {
-			return true, intervalI
-		}
-		// Include and end point is equal
-		if iStartRange && endRangeEqual && intervalI.start < intervalIPrime.start && !startRangeEqual {
-			return true, intervalI
-		}
-		// if res is interval I Prime
-		iPrimeStartRange := intervalIPrime.start < intervalI.start && intervalIPrime.start > intervalI.end
-		iPrimeEndRange := intervalIPrime.end < intervalI.start && intervalIPrime.end > intervalI.end
-		if iPrimeStartRange && iPrimeEndRange && !startRangeEqual && !endRangeEqual {
-			return true, intervalIPrime
-		}
-		// Include and Start point is equal
-		if iPrimeEndRange && startRangeEqual && intervalIPrime.end > intervalI.end && !endRangeEqual {
-			return true, intervalIPrime
-		}
-		// Include and end point is equal
-		if iPrimeStartRange && endRangeEqual && intervalIPrime.start < intervalI.start && !startRangeEqual {
-			return true, intervalIPrime
-		}
+	matched, _ := isApointMatched(intervalI, intervalIPrime)
+	checkPointMatchedUnion, v := hasPointMatchedUnion(intervalI, intervalIPrime)
+	if !matched && !checkPointMatchedUnion {
 
-	} else if !isGoAroundCircle(intervalI, fixedPoint) && isGoAroundCircle(intervalIPrime, fixedPoint) {
+		if !intervalI.isGoAround && !intervalIPrime.isGoAround {
+			if checkInclusion(intervalI, intervalIPrime) {
+				return true, intervalI
+			} else if checkInclusion(intervalIPrime, intervalI) {
+				return true, intervalIPrime
+			}
+		} else {
+			if intervalI.isGoAround && intervalIPrime.isGoAround {
+				if intervalI.start < intervalIPrime.start && intervalIPrime.end < intervalI.end {
+					return true, intervalI
+				} else if intervalIPrime.start < intervalI.start && intervalI.end < intervalIPrime.end {
+					return true, intervalIPrime
+				}
 
-		// interval I's endpoint is less than pivot ( pivot is 6 than endpoint can be less than 6,5,...)
-		iPrimeStartRangeLessThanPivot := intervalIPrime.start < intervalI.start && intervalIPrime.start < intervalI.end
-		iPrimeEndRangeLessThanPivot := intervalIPrime.end < intervalI.start && intervalIPrime.end < intervalI.end
-		if iPrimeStartRangeLessThanPivot && iPrimeEndRangeLessThanPivot && !startRangeEqual && !endRangeEqual {
-			return true, intervalIPrime
-		}
+			} else if intervalI.isGoAround && !intervalIPrime.isGoAround {
+				if intervalIPrime.start > intervalI.start && intervalIPrime.end > intervalI.start &&
+					intervalIPrime.start < fixedPoint.end && intervalIPrime.end < fixedPoint.end {
+					return true, intervalI
+				} else if intervalIPrime.start < intervalI.end && intervalIPrime.end < intervalI.end &&
+					intervalIPrime.start > fixedPoint.start && intervalIPrime.end < fixedPoint.start {
+					return true, intervalI
+				} else {
+					fmt.Println("not inclusion")
+					return false, Interval{start: -1, end: -1}
+				}
 
-		// Include and Start point is equal
-		if iPrimeEndRangeLessThanPivot && startRangeEqual && intervalIPrime.end < intervalI.end && !endRangeEqual {
-			return true, intervalIPrime
+			} else if !intervalI.isGoAround && intervalIPrime.isGoAround {
+				if intervalI.start > intervalIPrime.start && intervalI.end > intervalIPrime.start &&
+					intervalI.start < fixedPoint.end && intervalI.end < fixedPoint.end {
+					return true, intervalIPrime
+				} else if intervalI.start < intervalIPrime.end && intervalI.end < intervalIPrime.end &&
+					intervalI.start > fixedPoint.start && intervalI.end < fixedPoint.start {
+					return true, intervalIPrime
+				} else {
+					fmt.Println("not inclusion")
+					return false, Interval{start: -1, end: -1}
+				}
+			}
 		}
-		// Include and end point is equal
-		if iPrimeStartRangeLessThanPivot && endRangeEqual && intervalIPrime.start < intervalI.start && !startRangeEqual {
-			return true, intervalIPrime
-		}
-		// interval I's endpoint is more than pivot ( pivot is 6 than endpoint can be more than 1,2,...)
-		iPrimeStartRangeMoreThanPivot := intervalIPrime.start > intervalI.start && intervalIPrime.start > intervalI.end
-		iPrimeEndRangeMoreThanPivot := intervalIPrime.end > intervalI.start && intervalIPrime.end > intervalI.end
-		if iPrimeStartRangeMoreThanPivot && iPrimeEndRangeMoreThanPivot && !startRangeEqual && !endRangeEqual {
-			return true, intervalIPrime
-		}
-
-		// Include and Start point is equal
-		if iPrimeEndRangeMoreThanPivot && startRangeEqual && intervalIPrime.end > intervalI.end && !endRangeEqual {
-			return true, intervalIPrime
-		}
-		// Include and end point is equal
-		if iPrimeStartRangeMoreThanPivot && endRangeEqual && intervalIPrime.start > intervalI.start && !startRangeEqual {
-			return true, intervalIPrime
-		}
-
 	} else {
-		iStartRangeLessThanPivot := intervalI.start < intervalIPrime.start && intervalI.start < intervalIPrime.end
-		iEndRangeLessThanPivot := intervalI.end < intervalIPrime.start && intervalI.end < intervalIPrime.end
-
-		if iStartRangeLessThanPivot && iEndRangeLessThanPivot && !startRangeEqual && !endRangeEqual {
-			return true, intervalI
-		}
-		// Include and Start point is equal
-		if iEndRangeLessThanPivot && startRangeEqual && intervalIPrime.end > intervalI.end && !endRangeEqual {
-			return true, intervalI
-		}
-		// Include and end point is equal
-		if iEndRangeLessThanPivot && endRangeEqual && intervalIPrime.start > intervalI.start && !startRangeEqual {
-			return true, intervalI
-		}
-		iStartRangeMoreThanPivot := intervalI.start > intervalIPrime.start && intervalI.start > intervalIPrime.end
-		iEndRangeMoreThanPivot := intervalI.end > intervalIPrime.start && intervalI.end > intervalIPrime.end
-		if iStartRangeMoreThanPivot && iEndRangeMoreThanPivot && !startRangeEqual && !endRangeEqual {
-			return true, intervalI
-		}
-
-		// Include and Start point is equal
-		if iEndRangeMoreThanPivot && startRangeEqual && intervalIPrime.end < intervalI.end && !endRangeEqual {
-			return true, intervalIPrime
-		}
-		// Include and end point is equal
-		if iStartRangeMoreThanPivot && endRangeEqual && intervalIPrime.start < intervalI.start && !startRangeEqual {
-			return true, intervalIPrime
-		}
+		fmt.Println("Error Point matched exists.")
+		return false, v
 	}
-
 	return false, Interval{start: -1, end: -1}
 }
 func isOverlapped(intervalI, intervalIPrime, fixedPoint Interval) (bool, Interval) {
-	// Check for start point mismatch
-	if intervalI.start != intervalIPrime.start {
-		// Not go around circle
-		if !isGoAroundCircle(intervalI, fixedPoint) && !isGoAroundCircle(intervalIPrime, fixedPoint) {
-			// I < I-prime case
-			if intervalI.end > intervalIPrime.start && intervalIPrime.end > intervalIPrime.start {
-				return true, Interval{intervalI.start, intervalIPrime.end}
-			}
-			// I-prime < I case
-			if intervalI.end < intervalIPrime.start && intervalI.end > intervalI.start {
-				return true, Interval{intervalIPrime.start, intervalI.end}
-			}
+	if !intervalI.isGoAround && !intervalIPrime.isGoAround {
+		if intervalI.end > intervalIPrime.start && intervalI.end < intervalIPrime.end {
+			return true, Interval{start: intervalI.start, end: intervalIPrime.end, isGoAround: false}
 		}
-		// Both intervals go around the circle
-		if isGoAroundCircle(intervalI, fixedPoint) && isGoAroundCircle(intervalIPrime, fixedPoint) {
-			if intervalI.start < intervalIPrime.start && intervalI.end < intervalIPrime.end {
-				return true, Interval{intervalI.start, intervalIPrime.end}
-			}
-			if intervalI.start > intervalIPrime.start && intervalI.end > intervalIPrime.end {
-				return true, Interval{intervalIPrime.start, intervalI.end}
-			}
-		}
-		// Only intervalIPrime goes around the circle
-		if !isGoAroundCircle(intervalI, fixedPoint) && isGoAroundCircle(intervalIPrime, fixedPoint) {
-			if intervalIPrime.end < intervalI.start {
-				return true, Interval{intervalIPrime.start, intervalI.end}
-			}
-			if intervalI.end > intervalIPrime.start {
-				return true, Interval{intervalI.start, intervalIPrime.end}
-			}
-		}
-		// Only intervalI goes around the circle
-		if isGoAroundCircle(intervalI, fixedPoint) && !isGoAroundCircle(intervalIPrime, fixedPoint) {
-			if intervalIPrime.start > intervalI.end {
-				return true, Interval{intervalI.start, intervalIPrime.end}
-			}
-			if intervalIPrime.end > intervalI.start {
-				return true, Interval{intervalIPrime.start, intervalI.end}
-			}
-		}
-	}
 
+	} else if intervalI.isGoAround && !intervalIPrime.isGoAround {
+		// overlapped in start
+
+		// overlapped in end
+	} else if !intervalI.isGoAround && intervalIPrime.isGoAround {
+		// overlapped in start
+
+		// overlapped in end
+	}
 	return false, Interval{start: -1, end: -1}
 }
